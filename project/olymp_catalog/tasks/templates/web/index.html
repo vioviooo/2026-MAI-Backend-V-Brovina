@@ -1,0 +1,101 @@
+{% extends 'web/base.html' %}
+
+{% block content %}
+<div class="card">
+    <h1>🏆 Сборник задач по олимпиадному программированию</h1>
+    <p style="font-size: 18px; margin-top: 20px;">
+        Добро пожаловать! Здесь вы найдете задачи по различным темам, сможете отслеживать свой прогресс и улучшать навыки программирования.
+    </p>
+</div>
+
+<div class="card">
+    <h2>📊 Статистика</h2>
+    <div id="stats">
+        <p>Загрузка статистики...</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2>🚀 Быстрый старт</h2>
+    <div style="display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap;">
+        <a href="/web/problems/" class="btn">📚 Просмотреть все задачи</a>
+        <!-- <a href="/web/categories/" class="btn">📁 Категории</a> -->
+        {% if user.is_authenticated %}
+            <a href="/web/my/solved/" class="btn btn-success">✅ Мои решения</a>
+            <a href="/web/profile/" class="btn">👤 Мой профиль</a>
+        {% else %}
+            <a href="/admin/login/" class="btn">🔐 Войти</a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Загрузка статистики с API
+    fetch('/api/problems/')
+        .then(res => res.json())
+        .then(data => {
+            const statsContainer = document.getElementById('stats');
+            if (data.data) {
+                const total = data.data.length;
+                const easy = data.data.filter(p => p.difficulty === 'easy').length;
+                const medium = data.data.filter(p => p.difficulty === 'medium').length;
+                const hard = data.data.filter(p => p.difficulty === 'hard').length;
+                
+                statsContainer.innerHTML = `
+                    <div style="display: flex; gap: 20px; justify-content: space-around; text-align: center;">
+                        <div>
+                            <h3 style="color: #3498db;">${total}</h3>
+                            <p>Всего задач</p>
+                        </div>
+                        <div>
+                            <h3 style="color: #2ecc71;">${easy}</h3>
+                            <p>Лёгких</p>
+                        </div>
+                        <div>
+                            <h3 style="color: #f39c12;">${medium}</h3>
+                            <p>Средних</p>
+                        </div>
+                        <div>
+                            <h3 style="color: #e74c3c;">${hard}</h3>
+                            <p>Сложных</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                statsContainer.innerHTML = '<p>Статистика временно недоступна</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            document.getElementById('stats').innerHTML = '<p>Ошибка загрузки статистики</p>';
+        });
+</script>
+
+<style>
+    .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #3498db;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        transition: background 0.3s;
+    }
+    .btn:hover {
+        background: #2980b9;
+    }
+    .btn-success {
+        background: #2ecc71;
+    }
+    .btn-success:hover {
+        background: #27ae60;
+    }
+    h1 {
+        color: #2c3e50;
+    }
+    h2 {
+        color: #34495e;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}

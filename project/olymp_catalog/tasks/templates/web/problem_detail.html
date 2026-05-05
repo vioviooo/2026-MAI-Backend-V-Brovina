@@ -1,0 +1,64 @@
+{% extends 'web/base.html' %}
+{% block content %}
+<div class="card" id="problem-container">
+    <div id="problem-content">Загрузка...</div>
+</div>
+
+<script>
+    const problemId = {{ problem_id }};
+    const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
+    
+    fetch(`/api/problems/${problemId}/`)
+        .then(res => res.json())
+        .then(data => {
+            const problem = data.data;
+            const container = document.getElementById('problem-content');
+            if (problem) {
+                let buttonsHtml = '';
+                if (isAuthenticated) {
+                    buttonsHtml = `
+                        <div style="margin-top: 20px">
+                            <button onclick="updateStatus('solved')" class="btn btn-success">✅ Решено</button>
+                            <button onclick="updateStatus('want')" class="btn">⭐ Хочу решить</button>
+                        </div>
+                    `;
+                } else {
+                    buttonsHtml = `
+                        <p style="color: #888; margin-top: 20px;">
+                            🔒 <a href="/admin/login/">Войдите</a>, чтобы отмечать задачи как решённые
+                        </p>
+                    `;
+                }
+                
+                container.innerHTML = `
+                    <h1>${problem.title}</h1>
+                    <p>${problem.description}</p>
+                    <p>Сложность: ${problem.difficulty}</p>
+                    <p>Категория: ${problem.category}</p>
+                    
+                    <h3>Тесты:</h3>
+                    ${problem.test_cases ? problem.test_cases.map(t => `
+                        <div style="background:#f0f0f0; margin:10px 0; padding:10px">
+                            <strong>Вход:</strong> ${t.input}<br>
+                            <strong>Выход:</strong> ${t.output}
+                            ${t.is_sample ? '<span style="color:green"> (Пример)</span>' : ''}
+                        </div>
+                    `).join('') : ''}
+                    
+                    <h3>Подсказки:</h3>
+                    ${problem.hints ? problem.hints.map(h => `
+                        <div>💡 ${h}</div>
+                    `).join('') : ''}
+                    
+                    ${buttonsHtml}
+                `;
+            }
+        });
+
+    function getCookie(name) {
+        let value = "; " + document.cookie;
+        let parts = value.split("; " + name + "=");
+        if (parts.length === 2) return parts.pop().split(";").shift();
+    }
+</script>
+{% endblock %}

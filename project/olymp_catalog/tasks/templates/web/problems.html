@@ -1,0 +1,25 @@
+{% extends 'web/base.html' %}
+{% block content %}
+<div class="card">
+    <h1>Каталог задач</h1>
+    <div id="problems-list"></div>
+</div>
+
+<script>
+    fetch('/api/problems/')
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('problems-list');
+            if (data.data) {
+                container.innerHTML = data.data.map(p => `
+                    <div style="border:1px solid #ddd; margin:10px 0; padding:10px">
+                        <h3>${p.title}</h3>
+                        <p>${p.description}</p>
+                        <p>Сложность: ${p.difficulty}</p>
+                        <a href="/web/problems/${p.id}" class="btn">Подробнее</a>
+                    </div>
+                `).join('');
+            }
+        });
+</script>
+{% endblock %}

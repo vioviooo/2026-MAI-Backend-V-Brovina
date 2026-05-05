@@ -1,0 +1,23 @@
+{% extends 'web/base.html' %}
+{% block content %}
+<div class="card">
+    <h1>📂 Категории задач</h1>
+    <div id="categories-list">Загрузка...</div>
+</div>
+
+<script>
+    fetch('/api/categories/')
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('categories-list');
+            if (data.data) {
+                container.innerHTML = data.data.map(c => `
+                    <div style="border:1px solid #ddd; margin:10px 0; padding:15px">
+                        <h3>${c.name}</h3>
+                        <a href="/web/categories/${c.slug}" class="btn">Просмотреть задачи</a>
+                    </div>
+                `).join('');
+            }
+        });
+</script>
+{% endblock %}

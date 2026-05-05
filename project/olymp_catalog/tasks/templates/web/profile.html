@@ -1,0 +1,24 @@
+{% extends 'web/base.html' %}
+{% block content %}
+<div class="card">
+    <h1>Личный кабинет</h1>
+    <div id="profile-info">Загрузка...</div>
+</div>
+
+<script>
+    fetch('/api/profile/')
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('profile-info');
+            if (data.data) {
+                container.innerHTML = `
+                    <p><strong>Имя пользователя:</strong> ${data.data.username}</p>
+                    <p><strong>Email:</strong> ${data.data.email || 'Не указан'}</p>
+                    <p><strong>Дата регистрации:</strong> ${new Date(data.data.date_joined).toLocaleDateString()}</p>
+                `;
+            } else {
+                container.innerHTML = '<p style="color:red">Необходимо войти в систему</p>';
+            }
+        });
+</script>
+{% endblock %}
