@@ -1,8 +1,129 @@
 {% extends 'web/base.html' %}
 {% block content %}
 <div class="card">
-    <h1>⭐ Хочу решить</h1>
-    <p>Здесь будут отображаться задачи, которые вы хотите решить в будущем.</p>
-    <p style="color: #888;">Функционал находится в разработке</p>
+    <h1>Хочу решить</h1>
+    <div id="want-list">Загрузка...</div>
 </div>
+
+<script>
+    fetch('/api/user/want/')
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('want-list');
+            if (data.problems && data.problems.length > 0) {
+                container.innerHTML = data.problems.map(p => `
+                    <div class="problem-card">
+                        <div class="problem-card-content">
+                            <div>
+                                <h3 class="problem-title">${escapeHtml(p.title)}</h3>
+                                <p class="problem-difficulty difficulty-${p.difficulty}">${p.difficulty === 'easy' ? '🟢 Легкая' : p.difficulty === 'medium' ? '🟡 Средняя' : '🔴 Сложная'}</p>
+                            </div>
+                            <a href="/web/problems/${p.id}" class="btn-detail">📖 Подробнее</a>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div class="empty-state">📭 У вас пока нет задач в списке "Хочу решить"</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            document.getElementById('want-list').innerHTML = '<div class="empty-state error">❌ Ошибка загрузки</div>';
+        });
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+</script>
+
+<style>
+    .problem-card {
+        background: #f8f9fa;
+        border-radius: 16px;
+        margin-bottom: 15px;
+        padding: 0;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .problem-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    
+    .problem-card-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .problem-title {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        color: #2c3e50;
+    }
+    
+    .problem-difficulty {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        margin: 0;
+    }
+    
+    .difficulty-easy {
+        background: #2ecc71;
+        color: white;
+    }
+    
+    .difficulty-medium {
+        background: #f39c12;
+        color: white;
+    }
+    
+    .difficulty-hard {
+        background: #e74c3c;
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 50px 20px;
+        color: #7f8c8d;
+        font-size: 16px;
+    }
+    
+    .empty-state.error {
+        color: #e74c3c;
+    }
+    
+    .btn-detail {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-detail:hover {
+        background: #2980b9;
+        transform: scale(1.02);
+    }
+</style>
 {% endblock %}

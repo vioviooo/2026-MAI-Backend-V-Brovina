@@ -1,25 +1,473 @@
 {% extends 'web/base.html' %}
 {% block content %}
 <div class="card">
-    <h1>Каталог задач</h1>
-    <div id="problems-list"></div>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <h1>Каталог задач</h1>
+        {% if user.is_staff %}
+        <button id="createProblemBtn" class="btn-primary">➕ Создать задачу</button>
+        {% endif %}
+    </div>
+    
+    <!-- Кнопки фильтров -->
+    <div style="margin: 20px 0; display: flex; gap: 15px; flex-wrap: wrap; border-top: 1px solid #eee; padding-top: 20px;">
+        <button class="filter-btn active" data-difficulty="">📚 Все задачи</button>
+        <button class="filter-btn" data-difficulty="easy">🟢 Легкие</button>
+        <button class="filter-btn" data-difficulty="medium">🟡 Средние</button>
+        <button class="filter-btn" data-difficulty="hard">🔴 Сложные</button>
+    </div>
+    
+    <div id="problems-list">Загрузка задач...</div>
 </div>
 
-<script>
-    fetch('/api/problems/')
-        .then(res => res.json())
-        .then(data => {
-            const container = document.getElementById('problems-list');
-            if (data.data) {
-                container.innerHTML = data.data.map(p => `
-                    <div style="border:1px solid #ddd; margin:10px 0; padding:10px">
-                        <h3>${p.title}</h3>
-                        <p>${p.description}</p>
-                        <p>Сложность: ${p.difficulty}</p>
-                        <a href="/web/problems/${p.id}" class="btn">Подробнее</a>
+<!-- Модальное окно создания задачи -->
+<div id="createModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+    <div style="background:white; width:750px; margin:30px auto; padding:20px; border-radius:10px; max-height:85vh; display:flex; flex-direction:column;">
+        <h2 style="margin-bottom:15px;">Создание новой задачи</h2>
+        
+        <form id="createProblemForm" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+            {% csrf_token %}
+            
+            <div style="flex:1; overflow-y:auto; padding-right:10px;">
+                <div style="margin-bottom:15px;">
+                    <label>Название задачи *</label>
+                    <input type="text" id="title" name="title" required maxlength="200" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                
+                <div style="margin-bottom:15px;">
+                    <label>Условие задачи *</label>
+                    <textarea id="statement" name="statement" rows="5" required maxlength="10000" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:5px;"></textarea>
+                </div>
+                
+                <div style="margin-bottom:15px;">
+                    <label>Сложность *</label>
+                    <select id="difficulty" name="difficulty" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:5px;">
+                        <option value="easy">Легкая</option>
+                        <option value="medium" selected>Средняя</option>
+                        <option value="hard">Сложная</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom:15px;">
+                    <label>Ограничение по времени (сек)</label>
+                    <input type="number" id="time_limit" name="time_limit" value="1.0" step="0.1" min="0.1" max="10" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                
+                <div style="margin-bottom:15px;">
+                    <label>Ограничение по памяти (MB)</label>
+                    <input type="number" id="memory_limit" name="memory_limit" value="256" min="16" max="1024" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                
+                <div style="margin-bottom:15px;">
+                    <label>Теги (через запятую)</label>
+                    <input type="text" id="tags" name="tags" maxlength="500" placeholder="например: dp, графы, сортировка" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                
+                <div style="margin-bottom:15px; border-top: 1px solid #ddd; padding-top: 15px;">
+                    <label><strong>Тест-кейсы (максимум 3)</strong></label>
+                    
+                    <div id="testcases-container" style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
+                        <div class="testcase-item" data-index="0">
+                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                <textarea class="testcase-input" placeholder="Входные данные" rows="3" style="width: 45%; font-family: monospace; border:1px solid #ddd; border-radius:5px; padding:8px;"></textarea>
+                                <textarea class="testcase-output" placeholder="Ожидаемый вывод" rows="3" style="width: 45%; font-family: monospace; border:1px solid #ddd; border-radius:5px; padding:8px;"></textarea>
+                                <button type="button" class="remove-testcase" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; height: 60px; font-size: 14px;">Удалить</button>
+                            </div>
+                        </div>
                     </div>
-                `).join('');
-            }
+                    
+                    <button type="button" id="addTestCaseBtn" class="btn-secondary">+ Добавить тест-кейс</button>
+                    <p id="testcase-counter" style="font-size: 12px; color: #666; margin-top: 5px;">1/3 тест-кейсов</p>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:15px; padding-top:10px; border-top:1px solid #ddd;">
+                <button type="button" id="closeModalBtn" class="btn-secondary">Отмена</button>
+                <button type="submit" class="btn-primary">✅ Создать задачу</button>
+            </div>
+        </form>
+        
+        <div id="createMessage" style="margin-top:10px;"></div>
+    </div>
+</div>
+
+<style>
+    /* Общий стиль для всех кнопок */
+    .btn-primary {
+        background: #27ae60;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-primary:hover {
+        background: #219a52;
+        transform: scale(1.02);
+    }
+    
+    .btn-secondary {
+        background: #95a5a6;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-secondary:hover {
+        background: #7f8c8d;
+        transform: scale(1.02);
+    }
+    
+    /* Кнопка "Подробнее" */
+    .btn-detail {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-detail:hover {
+        background: #2980b9;
+        transform: scale(1.02);
+    }
+    
+    /* Кнопка удаления */
+    .btn-delete {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-left: 10px;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-delete:hover {
+        background: #c0392b;
+        transform: scale(1.02);
+    }
+    
+    /* Кнопки фильтров */
+    .filter-btn {
+        background: #3498db;
+        color: white;
+        padding: 10px 24px;
+        border: none;
+        border-radius: 30px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.7;
+        transition: all 0.2s ease;
+    }
+    
+    .filter-btn.active {
+        opacity: 1;
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .filter-btn:hover {
+        opacity: 0.9;
+        transform: scale(1.02);
+    }
+    
+    code {
+        background: #e0e0e0;
+        padding: 2px 5px;
+        border-radius: 5px;
+        font-family: monospace;
+    }
+    
+    #testcases-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    #testcases-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    #testcases-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+    
+    .problem-card {
+        border: 1px solid #ddd;
+        margin: 10px 0;
+        padding: 15px;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+    }
+    
+    .problem-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+</style>
+
+<script>
+    let currentUserIsStaff = {{ user.is_staff|yesno:"true,false" }};
+    let currentDifficulty = '';
+
+    function loadProblems() {
+        let url = '/api/problems/';
+        if (currentDifficulty) {
+            url += `?difficulty=${currentDifficulty}`;
+        }
+        
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('problems-list');
+                if (data.data && data.data.length > 0) {
+                    container.innerHTML = data.data.map(p => `
+                        <div class="problem-card" id="problem-${p.id}">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                                <div style="flex:1;">
+                                    <h3 style="margin-bottom:8px;">${escapeHtml(p.title)}</h3>
+                                    <p>📊 Сложность: ${p.difficulty}</p>
+                                    <p>⏱️ Ограничения: ${p.time_limit} сек / ${p.memory_limit} MB</p>
+                                    ${p.tags && p.tags.length ? `<p>🏷️ Теги: ${p.tags.join(', ')}</p>` : ''}
+                                </div>
+                                <div>
+                                    <a href="/web/problems/${p.id}" class="btn-detail">Подробнее</a>
+                                    ${currentUserIsStaff ? `<button onclick="deleteProblem(${p.id}, '${escapeHtml(p.title)}')" class="btn-delete">Удалить</button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p style="color: #666; text-align:center; padding:40px;">📭 В каталоге пока нет задач.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                document.getElementById('problems-list').innerHTML = '<p style="color: red; text-align:center; padding:40px;">❌ Ошибка загрузки задач</p>';
+            });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
         });
+    }
+
+    function deleteProblem(problemId, problemTitle) {
+        if (confirm(`Вы уверены, что хотите удалить задачу "${problemTitle}"? Это действие необратимо.`)) {
+            fetch(`/api/problems/${problemId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    loadProblems();
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Ошибка при удалении задачи');
+            });
+        }
+    }
+
+    function getCookie(name) {
+        let value = "; " + document.cookie;
+        let parts = value.split("; " + name + "=");
+        if (parts.length === 2) return parts.pop().split(";").shift();
+    }
+
+    // Кнопки-фильтры
+    function initFilters() {
+        const filters = document.querySelectorAll('.filter-btn');
+        
+        filters.forEach(btn => {
+            btn.addEventListener('click', function() {
+                filters.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentDifficulty = this.getAttribute('data-difficulty');
+                loadProblems();
+            });
+        });
+    }
+
+    // Тест-кейсы
+    let testCaseCount = 1;
+    const maxTestCases = 3;
+    const testcasesContainer = document.getElementById('testcases-container');
+    const addTestCaseBtn = document.getElementById('addTestCaseBtn');
+    const testcaseCounter = document.getElementById('testcase-counter');
+
+    function updateTestCaseCounter() {
+        if (testcaseCounter) {
+            testcaseCounter.textContent = `${testCaseCount}/${maxTestCases} тест-кейсов`;
+        }
+        if (addTestCaseBtn) {
+            addTestCaseBtn.style.display = testCaseCount >= maxTestCases ? 'none' : 'inline-block';
+        }
+    }
+
+    function addTestCase() {
+        if (testCaseCount >= maxTestCases) {
+            alert('Максимум 3 тест-кейса на задачу');
+            return;
+        }
+        
+        const newTestCase = document.createElement('div');
+        newTestCase.className = 'testcase-item';
+        newTestCase.innerHTML = `
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <textarea class="testcase-input" placeholder="Входные данные" rows="3" style="width: 45%; font-family: monospace; border:1px solid #ddd; border-radius:5px; padding:8px;"></textarea>
+                <textarea class="testcase-output" placeholder="Ожидаемый вывод" rows="3" style="width: 45%; font-family: monospace; border:1px solid #ddd; border-radius:5px; padding:8px;"></textarea>
+                <button type="button" class="remove-testcase" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; height: 60px;">🗑 Удалить</button>
+            </div>
+        `;
+        testcasesContainer.appendChild(newTestCase);
+        
+        newTestCase.querySelector('.remove-testcase').addEventListener('click', function() {
+            removeTestCase(this);
+        });
+        
+        testCaseCount++;
+        updateTestCaseCounter();
+    }
+
+    function removeTestCase(button) {
+        const testcaseDiv = button.closest('.testcase-item');
+        if (testcaseDiv && testCaseCount > 1) {
+            testcaseDiv.remove();
+            testCaseCount--;
+            updateTestCaseCounter();
+        } else {
+            alert('Должен быть хотя бы один тест-кейс');
+        }
+    }
+
+    if (addTestCaseBtn) {
+        addTestCaseBtn.addEventListener('click', addTestCase);
+    }
+
+    document.querySelectorAll('.remove-testcase').forEach(btn => {
+        btn.addEventListener('click', function() { removeTestCase(this); });
+    });
+
+    // Модальное окно
+    const modal = document.getElementById('createModal');
+    const createBtn = document.getElementById('createProblemBtn');
+    const closeBtn = document.getElementById('closeModalBtn');
+    const createForm = document.getElementById('createProblemForm');
+
+    if (createBtn) {
+        createBtn.onclick = function() {
+            const container = document.getElementById('testcases-container');
+            while (container.children.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+            testCaseCount = 1;
+            updateTestCaseCounter();
+            
+            document.getElementById('title').value = '';
+            document.getElementById('statement').value = '';
+            document.getElementById('difficulty').value = 'medium';
+            document.getElementById('time_limit').value = '1.0';
+            document.getElementById('memory_limit').value = '256';
+            document.getElementById('tags').value = '';
+            
+            const firstInput = document.querySelector('.testcase-input');
+            const firstOutput = document.querySelector('.testcase-output');
+            if (firstInput) firstInput.value = '';
+            if (firstOutput) firstOutput.value = '';
+            
+            modal.style.display = 'block';
+            document.getElementById('createMessage').innerHTML = '';
+        };
+    }
+
+    if (closeBtn) {
+        closeBtn.onclick = () => modal.style.display = 'none';
+    }
+
+    window.onclick = (event) => {
+        if (event.target === modal) modal.style.display = 'none';
+    };
+
+    if (createForm) {
+        createForm.onsubmit = function(e) {
+            e.preventDefault();
+            
+            const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(t => t);
+            
+            const testCases = [];
+            document.querySelectorAll('.testcase-item').forEach(item => {
+                const inputData = item.querySelector('.testcase-input').value.trim();
+                const outputData = item.querySelector('.testcase-output').value.trim();
+                if (inputData || outputData) {
+                    testCases.push({ input: inputData, output: outputData, is_sample: true });
+                }
+            });
+            
+            const problemData = {
+                title: document.getElementById('title').value,
+                statement: document.getElementById('statement').value,
+                difficulty: document.getElementById('difficulty').value,
+                time_limit: parseFloat(document.getElementById('time_limit').value),
+                memory_limit: parseInt(document.getElementById('memory_limit').value),
+                tags: tags,
+                test_cases: testCases
+            };
+            
+            fetch('/api/problems/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(problemData)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('createMessage').innerHTML = '<p style="color: green;">✅ ' + data.message + '</p>';
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                        loadProblems();
+                    }, 1500);
+                } else {
+                    document.getElementById('createMessage').innerHTML = '<p style="color: red;">❌ ' + data.message + '</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                document.getElementById('createMessage').innerHTML = '<p style="color: red;">❌ Ошибка при создании задачи</p>';
+            });
+        };
+    }
+
+    initFilters();
+    loadProblems();
 </script>
 {% endblock %}

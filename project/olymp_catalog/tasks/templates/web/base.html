@@ -6,34 +6,235 @@
     <title>{% block title %}Каталог задач по олимпиадному программированию{% endblock %}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f5f5f5; }
-        .header { background: #2c3e50; color: white; padding: 1rem; }
-        .nav { display: flex; gap: 20px; justify-content: center; }
-        .nav a { color: white; text-decoration: none; }
-        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
-        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .btn { display: inline-block; padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; }
-        .btn-danger { background: #e74c3c; }
-        .btn-success { background: #2ecc71; }
+        
+        /* Единый шрифт для всего сайта */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+        
+        /* Шапка */
+        .header { 
+            background: #2c3e50;
+            backdrop-filter: blur(10px);
+            color: white; 
+            padding: 1rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .nav { 
+            display: flex; 
+            gap: 25px; 
+            justify-content: center;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .nav a, .nav form button { 
+            color: white; 
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-family: inherit;
+        }
+        
+        .nav a:hover, .nav form button:hover {
+            color: #3498db;
+            transform: translateY(-2px);
+        }
+        
+        /* Контейнер */
+        .container { 
+            max-width: 1200px; 
+            margin: 30px auto; 
+            padding: 0 20px; 
+        }
+        
+        /* Карточка */
+        .card { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 25px; 
+            margin-bottom: 25px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-3px);
+        }
+        
+        /* Единый стиль всех кнопок */
+        .btn, .btn-detail, .btn-delete, .btn-solved, .btn-want, .btn-primary, .btn-secondary { 
+            display: inline-block; 
+            padding: 10px 24px; 
+            border: none;
+            border-radius: 30px; 
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .btn { 
+            background: #3498db; 
+            color: white; 
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(52,152,219,0.3);
+        }
+        
+        .btn-primary {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #219a52;
+            transform: scale(1.02);
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            transform: scale(1.02);
+        }
+        
+        .btn-detail {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-detail:hover {
+            background: #2980b9;
+            transform: scale(1.02);
+        }
+        
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #c0392b;
+            transform: scale(1.02);
+        }
+        
+        .btn-success { 
+            background: #2ecc71; 
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #27ae60;
+            transform: scale(1.02);
+        }
+        
+        .btn-solved {
+            background: #2ecc71;
+            color: white;
+        }
+        
+        .btn-solved:hover {
+            background: #27ae60;
+            transform: scale(1.02);
+        }
+        
+        .btn-want {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .btn-want:hover {
+            background: #e67e22;
+            transform: scale(1.02);
+        }
+        
+        /* Заголовки */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: inherit;
+            font-weight: 600;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+        
+        h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        /* Текст */
+        p, li, span, div, label {
+            font-family: inherit;
+        }
+        
+        code, pre {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: 13px;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .nav {
+                gap: 15px;
+            }
+            
+            .btn, .btn-detail, .btn-delete, .btn-solved, .btn-want {
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+            
+            .card {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="nav">
-            <a href="/web/">Главная</a>
-            <a href="/web/problems/">Задачи</a>
-            <!-- <a href="/web/categories/">Категории</a> -->
+            <a href="/web/">🏠 Главная</a>
+            <a href="/web/problems/">📚 Задачи</a>
             {% if user.is_authenticated %}
-                <a href="/web/profile/">Профиль</a>
-                <a href="/web/my/solved/">Решённые</a>
-                <a href="/web/my/want/">Хочу решить</a>
-                <!-- <a href="/admin/logout/">Выйти</a> -->
-                <form method="post" action="/admin/logout/" style="display:inline;">
+                <a href="/web/profile/">👤 Профиль</a>
+                <a href="/web/my/solved/">✅ Решённые</a>
+                <a href="/web/my/want/">⭐ Хочу решить</a>
+                <form method="post" action="/web/logout/" style="display:inline;">
                     {% csrf_token %}
-                    <button type="submit" style="background:none; border:none; color:white; cursor:pointer; font:inherit; padding:0; text-decoration:underline;">Выйти</button>
+                    <button type="submit" style="background:none; border:none; color:white; cursor:pointer; font:inherit; padding:0;">🚪 Выйти</button>
                 </form>
             {% else %}
-                <a href="/admin/login/">Войти</a>
+                <a href="/web/login/">🔐 Войти</a>
+                <a href="/web/register/">📝 Регистрация</a>
             {% endif %}
         </div>
     </div>

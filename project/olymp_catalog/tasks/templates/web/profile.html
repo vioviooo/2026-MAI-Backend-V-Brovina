@@ -12,13 +12,120 @@
             const container = document.getElementById('profile-info');
             if (data.data) {
                 container.innerHTML = `
-                    <p><strong>Имя пользователя:</strong> ${data.data.username}</p>
-                    <p><strong>Email:</strong> ${data.data.email || 'Не указан'}</p>
-                    <p><strong>Дата регистрации:</strong> ${new Date(data.data.date_joined).toLocaleDateString()}</p>
+                    <div class="profile-container">
+                        <div class="profile-avatar">
+                            <div class="avatar-circle">${data.data.username.charAt(0).toUpperCase()}</div>
+                        </div>
+                        <div class="profile-info">
+                            <div class="info-row">
+                                <span class="info-label">👤 Имя пользователя:</span>
+                                <span class="info-value">${escapeHtml(data.data.username)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">📧 Email:</span>
+                                <span class="info-value">${escapeHtml(data.data.email) || 'Не указан'}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">📅 Дата регистрации:</span>
+                                <span class="info-value">${new Date(data.data.date_joined).toLocaleDateString('ru-RU')}</span>
+                            </div>
+                        </div>
+                    </div>
                 `;
             } else {
-                container.innerHTML = '<p style="color:red">Необходимо войти в систему</p>';
+                container.innerHTML = '<div class="error-message">🔒 Необходимо войти в систему</div>';
             }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            document.getElementById('profile-info').innerHTML = '<div class="error-message">❌ Ошибка загрузки профиля</div>';
         });
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
 </script>
+
+<style>
+    .profile-container {
+        display: flex;
+        gap: 30px;
+        flex-wrap: wrap;
+        padding: 10px 0;
+    }
+    
+    .profile-avatar {
+        flex-shrink: 0;
+    }
+    
+    .avatar-circle {
+        width: 120px;
+        height: 120px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        font-weight: bold;
+        color: white;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    
+    .profile-info {
+        flex: 1;
+        min-width: 250px;
+    }
+    
+    .info-row {
+        padding: 12px 0;
+        border-bottom: 1px solid #ecf0f1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #2c3e50;
+        min-width: 150px;
+    }
+    
+    .info-value {
+        color: #34495e;
+        word-break: break-word;
+    }
+    
+    .error-message {
+        text-align: center;
+        padding: 40px;
+        color: #e74c3c;
+        background: #fdf0ef;
+        border-radius: 12px;
+        font-size: 16px;
+    }
+    
+    @media (max-width: 600px) {
+        .profile-container {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .info-row {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .info-label {
+            min-width: auto;
+        }
+    }
+</style>
 {% endblock %}

@@ -5,9 +5,40 @@
 </div>
 
 <script>
-    const problemId = {{ problem_id }};
+    const problemId = "{{ problem_id }}";
     const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
     
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    function updateStatus(status) {
+        fetch(`/api/problems/${problemId}/status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: new URLSearchParams({status: status})
+        })
+        .then(res => res.json())
+        .then(data => alert(data.message))
+        .catch(error => console.error('Ошибка:', error));
+    }
+    
+    function getCookie(name) {
+        let value = "; " + document.cookie;
+        let parts = value.split("; " + name + "=");
+        if (parts.length === 2) return parts.pop().split(";").shift();
+    }
+    
+    // Загрузка задачи
     fetch(`/api/problems/${problemId}/`)
         .then(res => res.json())
         .then(data => {
@@ -17,48 +48,197 @@
                 let buttonsHtml = '';
                 if (isAuthenticated) {
                     buttonsHtml = `
-                        <div style="margin-top: 20px">
-                            <button onclick="updateStatus('solved')" class="btn btn-success">✅ Решено</button>
-                            <button onclick="updateStatus('want')" class="btn">⭐ Хочу решить</button>
+                        <div style="margin-top: 25px; display: flex; gap: 15px;">
+                            <button onclick="updateStatus('solved')" class="btn-solved">✅ Решено</button>
+                            <button onclick="updateStatus('want')" class="btn-want">⭐ Хочу решить</button>
                         </div>
                     `;
                 } else {
                     buttonsHtml = `
-                        <p style="color: #888; margin-top: 20px;">
-                            🔒 <a href="/admin/login/">Войдите</a>, чтобы отмечать задачи как решённые
+                        <p style="color: #888; margin-top: 25px; text-align: center;">
+                            🔒 <a href="/web/login/" style="color: #3498db;">Войдите</a>, чтобы отмечать задачи как решенные
                         </p>
                     `;
                 }
                 
+                let testCasesHtml = '';
+                if (problem.test_cases && problem.test_cases.length > 0) {
+                    testCasesHtml = '<h3>Тест-кейсы:</h3>';
+                    problem.test_cases.forEach((tc, idx) => {
+                        testCasesHtml += `
+                            <div class="testcase-block">
+                                <p><strong>Входные данные:</strong><br><code>${escapeHtml(tc.input)}</code></p>
+                                <p><strong>Ожидаемый вывод:</strong><br><code>${escapeHtml(tc.output)}</code></p>
+                            </div>
+                        `;
+                    });
+                }
+                
                 container.innerHTML = `
-                    <h1>${problem.title}</h1>
-                    <p>${problem.description}</p>
-                    <p>Сложность: ${problem.difficulty}</p>
-                    <p>Категория: ${problem.category}</p>
-                    
-                    <h3>Тесты:</h3>
-                    ${problem.test_cases ? problem.test_cases.map(t => `
-                        <div style="background:#f0f0f0; margin:10px 0; padding:10px">
-                            <strong>Вход:</strong> ${t.input}<br>
-                            <strong>Выход:</strong> ${t.output}
-                            ${t.is_sample ? '<span style="color:green"> (Пример)</span>' : ''}
-                        </div>
-                    `).join('') : ''}
-                    
-                    <h3>Подсказки:</h3>
-                    ${problem.hints ? problem.hints.map(h => `
-                        <div>💡 ${h}</div>
-                    `).join('') : ''}
-                    
+                    <h1>📌 ${escapeHtml(problem.title)}</h1>
+                    <div class="problem-meta">
+                        <span class="difficulty difficulty-${problem.difficulty}">${problem.difficulty === 'easy' ? '🟢 Лёгкая' : problem.difficulty === 'medium' ? '🟡 Средняя' : '🔴 Сложная'}</span>
+                        <span class="limit">⏱️ ${problem.time_limit} сек</span>
+                        <span class="limit">💾 ${problem.memory_limit} MB</span>
+                    </div>
+                    <h3>Условие задачи:</h3>
+                    <div class="statement">
+                        <p style="white-space: pre-wrap;">${escapeHtml(problem.statement)}</p>
+                    </div>
+                    ${problem.tags && problem.tags.length ? `<div class="tags"><strong>Теги:</strong> ${problem.tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+                    ${testCasesHtml}
                     ${buttonsHtml}
                 `;
+            } else {
+                container.innerHTML = '<p style="text-align:center; padding:40px;">❌ Задача не найдена</p>';
             }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            document.getElementById('problem-content').innerHTML = '<p style="text-align:center; padding:40px; color:red;">❌ Ошибка загрузки задачи</p>';
         });
-
-    function getCookie(name) {
-        let value = "; " + document.cookie;
-        let parts = value.split("; " + name + "=");
-        if (parts.length === 2) return parts.pop().split(";").shift();
-    }
 </script>
+
+<style>
+    /* Общий стиль страницы задачи */
+    .problem-meta {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin: 20px 0;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .difficulty {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 14px;
+    }
+    
+    .difficulty-easy {
+        background: #2ecc71;
+        color: white;
+    }
+    
+    .difficulty-medium {
+        background: #f39c12;
+        color: white;
+    }
+    
+    .difficulty-hard {
+        background: #e74c3c;
+        color: white;
+    }
+    
+    .limit {
+        background: #ecf0f1;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+    }
+    
+    .statement {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 12px;
+        margin: 20px 0;
+    }
+    
+    .statement h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: #2c3e50;
+    }
+    
+    .tags {
+        margin: 15px 0;
+    }
+    
+    .tag {
+        display: inline-block;
+        background: #ecf0f1;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        margin-left: 8px;
+        color: #2c3e50;
+    }
+    
+    /* Тест-кейсы */
+    .testcase-block {
+        max-width: 200px;
+        background: #f5f5f5;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 12px;
+        font-family: monospace;
+        border-left: 4px solid #3498db;
+    }
+    
+    .testcase-block code {
+        max-width: 200px;
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 8px;
+        border-radius: 8px;
+        display: block;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    
+    /* Кнопка "Решено" */
+    .btn-solved {
+        background: #2ecc71;
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 30px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-solved:hover {
+        background: #27ae60;
+        transform: scale(1.02);
+    }
+    
+    /* Кнопка "Хочу решить" */
+    .btn-want {
+        background: #f39c12;
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 30px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-want:hover {
+        background: #e67e22;
+        transform: scale(1.02);
+    }
+    
+    code {
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    
+    h1 {
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+</style>
 {% endblock %}

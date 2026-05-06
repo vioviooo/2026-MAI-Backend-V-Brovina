@@ -1,0 +1,36 @@
+{% extends 'web/base.html' %}
+{% block title %}Вход{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 500px; margin: 0 auto;">
+    <h1>🔐 Вход в систему</h1>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 10px; margin: 10px 0; border-radius: 5px; background: {% if message.tags == 'error' %}#f8d7da{% else %}#d4edda{% endif %}; color: {% if message.tags == 'error' %}#721c24{% else %}#155724{% endif %};">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 15px;">
+            <label>Имя пользователя</label>
+            <input type="text" name="username" required style="width: 100%; padding: 8px; margin-top: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label>Пароль</label>
+            <input type="password" name="password" required style="width: 100%; padding: 8px; margin-top: 5px;">
+        </div>
+        
+        <button type="submit" class="btn" style="width: 100%;">Войти</button>
+    </form>
+    
+    <p style="margin-top: 15px; text-align: center;">
+        Нет аккаунта? <a href="/web/register/">Зарегистрируйтесь</a>
+    </p>
+</div>
+{% endblock %}

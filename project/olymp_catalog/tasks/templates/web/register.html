@@ -1,0 +1,46 @@
+{% extends 'web/base.html' %}
+{% block title %}Регистрация{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 500px; margin: 0 auto;">
+    <h1>📝 Регистрация</h1>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 10px; margin: 10px 0; border-radius: 5px; background: {% if message.tags == 'error' %}#f8d7da{% else %}#d4edda{% endif %}; color: {% if message.tags == 'error' %}#721c24{% else %}#155724{% endif %};">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 15px;">
+            <label>Имя пользователя *</label>
+            <input type="text" name="username" required style="width: 100%; padding: 8px; margin-top: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label>Email</label>
+            <input type="email" name="email" style="width: 100%; padding: 8px; margin-top: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label>Пароль *</label>
+            <input type="password" name="password" required style="width: 100%; padding: 8px; margin-top: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label>Подтверждение пароля *</label>
+            <input type="password" name="password_confirm" required style="width: 100%; padding: 8px; margin-top: 5px;">
+        </div>
+        
+        <button type="submit" class="btn" style="background: #27ae60; width: 100%;">Зарегистрироваться</button>
+    </form>
+    
+    <p style="margin-top: 15px; text-align: center;">
+        Уже есть аккаунт? <a href="/web/login/">Войдите</a>
+    </p>
+</div>
+{% endblock %}
